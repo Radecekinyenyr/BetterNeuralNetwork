@@ -41,7 +41,6 @@ namespace mxLib
 					MatrixArray2D[i][j] = 0;
 				}
 			}
-
 			alreadyWas = true;
 
 		}
@@ -53,10 +52,46 @@ namespace mxLib
 
 		~Matrix()
 		{
+			for (auto i = 0; i < rows; ++i)
+				delete[] MatrixArray2D[i];
 			delete[] MatrixArray2D;
 		}
 
-		
+		Matrix& operator=(Matrix<MatrixType> matrix)
+		{
+			if (this == &matrix)
+				return *this;
+
+			rows = matrix.rows;
+			cols = matrix.cols;
+
+			MatrixArray2D = new MatrixType * [rows];
+
+			// for loop nacte hodnoty na zacatku na hodnotu 0 
+			for (auto i = 0; i < rows; ++i) {
+				MatrixArray2D[i] = new MatrixType[cols];
+			}
+
+			for (auto i = 0; i < rows; ++i) {
+				for (auto j = 0; j < cols; ++j) {
+					MatrixArray2D[i][j] = 0;
+				}
+			}
+			alreadyWas = true;
+
+			for (int i = 0; i < matrix.rows; ++i)
+				for (int j = 0; j < matrix.cols; ++j)
+					MatrixArray2D[i][j] = matrix.MatrixArray2D[i][j];
+
+			sum = matrix.sum;
+			arr = matrix.arr;			//alreadyWas = matrix.alreadyWas;
+			storageCols = matrix.storageCols;
+			storageRows = matrix.storageRows;
+
+			return *this;
+
+		}
+
 		void setRandomValue(MatrixType min, MatrixType max)
 		{
 			// funkce ktera po zavolani nastavi konkretni matici na nahodnou hodnotu
@@ -188,7 +223,7 @@ namespace mxLib
 		}
 		void showValues()
 		{
-		    std::cout << "Hodnoty matice: " << std::endl;
+				std::cout << "Hodnoty matice: " << cols << " " << rows << std::endl;
 			for (auto i = 0; i < rows; ++i) {
 				for (auto j = 0; j < cols; ++j) {
 							std::cout << MatrixArray2D[i][j] << "   ";
