@@ -15,7 +15,6 @@ namespace mxLib
 		std::vector<MatrixType> arr;
 		MatrixType sum = 0;
 
-		int* storageRows = 0, * storageCols = 0;
 		MatrixType** MatrixArray2D;
 		bool alreadyWas = false;
 
@@ -31,7 +30,6 @@ namespace mxLib
 			cols = cols1;
 			MatrixArray2D = new MatrixType* [rows];
 
-			// for loop nacte hodnoty na zacatku na hodnotu 0 
 			for (auto i = 0; i < rows; ++i) {
 				MatrixArray2D[i] = new MatrixType[cols];
 			}
@@ -44,7 +42,34 @@ namespace mxLib
 			alreadyWas = true;
 
 		}
+		
+		Matrix(const Matrix<MatrixType>& matrix)
+		{
+				rows = matrix.rows;
+				cols = matrix.cols;
+				
+				MatrixArray2D = new MatrixType * [rows];
+				for (auto i = 0; i < rows; ++i) {
+					MatrixArray2D[i] = new MatrixType[cols];
+				}
 
+				for (auto i = 0; i < rows; ++i) {
+					for (auto j = 0; j < cols; ++j) {
+						MatrixArray2D[i][j] = 0;
+					}
+				}
+				
+				alreadyWas = true;
+
+				for (int i = 0; i < matrix.rows; ++i)
+					for (int j = 0; j < matrix.cols; ++j)
+						MatrixArray2D[i][j] = matrix.MatrixArray2D[i][j];
+
+				sum = matrix.sum;
+				arr = matrix.arr;
+				
+		}
+		
 		Matrix()
 		{
 
@@ -52,12 +77,16 @@ namespace mxLib
 
 		~Matrix()
 		{
-			for (auto i = 0; i < rows; ++i)
-				delete[] MatrixArray2D[i];
-			delete[] MatrixArray2D;
+			if (alreadyWas)
+			{
+				for (auto i = 0; i < rows; ++i)
+					delete[] MatrixArray2D[i];
+				delete[] MatrixArray2D;
+				alreadyWas = false;
+			}
 		}
-
-		Matrix& operator=(Matrix<MatrixType> matrix)
+		
+		Matrix& operator=(const Matrix<MatrixType>& matrix)
 		{
 			if (this == &matrix)
 				return *this;
@@ -85,13 +114,11 @@ namespace mxLib
 
 			sum = matrix.sum;
 			arr = matrix.arr;			//alreadyWas = matrix.alreadyWas;
-			storageCols = matrix.storageCols;
-			storageRows = matrix.storageRows;
 
 			return *this;
 
 		}
-
+		
 		void setRandomValue(MatrixType min, MatrixType max)
 		{
 			// funkce ktera po zavolani nastavi konkretni matici na nahodnou hodnotu
@@ -164,8 +191,8 @@ namespace mxLib
 
 			if (alreadyWas != true)
 			{
-				rows = matrix1.rows;
-				cols = matrix2.cols;
+				rows = matrix2.rows;
+				cols = matrix1.cols;
 
 				MatrixArray2D = new MatrixType* [rows];
 
@@ -173,6 +200,7 @@ namespace mxLib
 				for (auto i = 0; i < rows; ++i) {
 					MatrixArray2D[i] = new MatrixType[cols];
 				}
+
 
 				for (auto i = 0; i < rows; ++i) {
 					for (auto j = 0; j < cols; ++j) {
@@ -188,12 +216,10 @@ namespace mxLib
 			}
 
 
-
 			if (matrix1.cols == matrix2.rows) {
 
 				for (auto i = 0; i < matrix1.rows; ++i) {
 					for (auto j = 0; j < matrix2.cols; ++j) {
-						MatrixType sum = 0;
 						for (auto k = 0; k < matrix1.cols; ++k)
 						{
 							sum += matrix1.MatrixArray2D[i][k] * matrix2.MatrixArray2D[k][j];
@@ -223,10 +249,11 @@ namespace mxLib
 		}
 		void showValues()
 		{
-				std::cout << "Hodnoty matice: " << cols << " " << rows << std::endl;
+				std::cout << "Hodnoty matice: " << rows << " " << cols << std::endl;
 			for (auto i = 0; i < rows; ++i) {
 				for (auto j = 0; j < cols; ++j) {
-							std::cout << MatrixArray2D[i][j] << "   ";
+					std::cout << i << "  cols: " << j << std::endl;
+					std::cout << MatrixArray2D[i][j] << "   ";
 				}
 					std::cout << std::endl;
 			}
@@ -261,9 +288,9 @@ namespace mxLib
 		}
 
 		template<class T>
-		void fromArray(std::vector<T> array1, T inSize)
+		void fromArray(std::vector<T> array1, size_t inSize)
 		{
-			if (alreadyWas != true)
+			if (!alreadyWas)
 			{
 				rows = inSize;
 				cols = 1;

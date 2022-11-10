@@ -34,28 +34,27 @@ namespace NNLib {
 		return std::is_base_of<Base, T>::value;
 	}
 
-	template<typename Type>
-	struct ActivationFunctions{
-		Type sigmoidFunction(Type x)
+
+		double sigmoidFunction(double x)
 		{
 			return 1 / (1 + exp(-x));
 		}
 
-		Type dSigmoidFunction(Type y)
+		double dSigmoidFunction(double y)
 		{
 			return y * (1 - y);
 		}
 
-		Type hyperbolicTanhgens(Type x)
+		double hyperbolicTanhgens(double x)
 		{
 			return tanh(x);
 		}
 
-		Type dHyperbolicTanhgens(Type y)
+		double dHyperbolicTanhgens(double y)
 		{
 			return 1 - (y * y);
 		}
-	};
+	
 
 	template<typename NNType>
 	class NeuralNetwork
@@ -77,6 +76,7 @@ namespace NNLib {
 		mxLib::Matrix<NNType>* matrix_of_weightsForTranspose;
 		mxLib::Matrix<NNType>* matrix_of_deltaWeights;
 
+		//using ActivationFunction = NNType(ActivationFunctions<NNType>::*)(NNType);
 		using ActivationFunction = NNType(*)(NNType);
 		ActivationFunction func, dFunc;
 
@@ -89,20 +89,25 @@ namespace NNLib {
 			layers_count = layers;
 
 			if (layers_count.size() > 1) {
-				matrix_of_weights = new mxLib::Matrix<NNType>[layers_count.size() - 1];
-				matrix_of_layers = new mxLib::Matrix<NNType>[layers_count.size() - 1];
-				matrix_of_bias = new mxLib::Matrix<NNType>[layers_count.size() - 1];
-				for (int i = 0; i < layers_count.size() - 1; ++i) {
-					matrix_of_weights[i] = mxLib::Matrix<NNType>(layers_count[i + 1], layers_count[i]);
-					matrix_of_layers[i] = mxLib::Matrix<NNType>(layers_count[i + 1], layers_count[i]);
-					matrix_of_bias[i] = mxLib::Matrix<NNType>(layers_count[i + 1], 1);
+				matrix_of_weights = new mxLib::Matrix<NNType>[layers_count.size()-1];
+				matrix_of_layers = new mxLib::Matrix<NNType>[layers_count.size()];
+				matrix_of_bias = new mxLib::Matrix<NNType>[layers_count.size()-1];
+				for (int i = 0; i < layers_count.size(); ++i) {
+
+					if (i < layers_count.size() - 1) {
+						matrix_of_layers[i] = mxLib::Matrix<NNType>(layers_count[i + 1], layers_count[i]);
+						matrix_of_weights[i] = mxLib::Matrix<NNType>(layers_count[i + 1], layers_count[i]);
+						matrix_of_bias[i] = mxLib::Matrix<NNType>(layers_count[i + 1], layers_count[i]);
+
+					}
+
 				}
-				for (int i = 0; i < layers_count.size() - 1; ++i) {
+				for (int i = 0; i < layers_count.size()-1; ++i) {
 					matrix_of_bias[i].setRandomValue(-1, 1);
 					matrix_of_weights[i].setRandomValue(-1, 1);
 				}
-			}
 
+			}
 			else {
 				matrix_of_weights = new mxLib::Matrix<NNType>[layers_count.size()];
 				matrix_of_layers = new mxLib::Matrix<NNType>[layers_count.size()];
@@ -112,6 +117,7 @@ namespace NNLib {
 				matrix_of_bias[layers_count.size()-1].setRandomValue(-1, 1);
 				matrix_of_weights[layers_count.size()-1].setRandomValue(-1, 1);
 			}
+
 			matrix_of_inputs = new mxLib::Matrix<NNType>();
 			matrix_of_targets = new mxLib::Matrix<NNType>();
 		}
@@ -128,40 +134,57 @@ namespace NNLib {
 		std::vector<NNType> feedForward(std::vector<NNType> inputs)
 		{
 			matrix_of_inputs->fromArray(inputs, inputs.size());
-			for (int i = 0; i < layers_count.size() - 1; ++i) {
-				matrix_of_layers[i].multiplyTwoMatrix(*matrix_of_weights[i], matrix_of_inputs);
-				matrix_of_layers[i].addTwoMatrix(*matrix_of_bias[i]);
-				matrix_of_layers[i].map(func);
+			for (int i = 0; i < layers_count.size(); ++i) {
+			
+				if (i < layers_count.size() - 1) {
+					matrix_of_layers[i].multiplyTwoMatrix(matrix_of_weights[i], *matrix_of_inputs);
+					matrix_of_layers[i].addTwoMatrix(matrix_of_bias[i]);
+					matrix_of_layers[i].map(func);
+				}
+
 			}
 
 			return matrix_of_layers[layers_count.size() - 2].toArray();
 		}
 
-		void backPropagation(std::vector<NNType>* targets)
+		void backPropagation(std::vector<NNType> targets)
 		{
-			matrix_of_targets->fromArray(targets, targets->size());
+			matrix_of_targets->fromArray(targets, targets.size());
+			matrix_of_layersForTranspose = new mxLib::Matrix<NNType>[layers_count.size() - 1];
+			matrix_of_errors = new mxLib::Matrix<NNType>[layers_count.size() - 1];
+			matrix_of_weightsForTranspose = new mxLib::Matrix<NNType>[layers_count.size() - 1];
+			matrix_of_gradients = new mxLib::Matrix<NNType>[layers_count.size() - 1];
+			matrix_of_deltaWeights = new mxLib::Matrix<NNType>[layers_count.size() - 1];
 
-			matrix_of_layersForTranspose = new mxLib::Matrix[layers_count.size() - 1];
-			matrix_of_errors = new mxLib::Matrix[layers_count.size() - 1];
-			matrix_of_weightsForTranspose = new mxLib::Matrix[layers_count.size() - 1];
-			matrix_of_gradients = new mxLib::Matrix[layers_count.size() - 1];
-			matrix_of_deltaWeights = new mxLib::Matrix[layers_count.size() - 1];
-
-
-			for (int i = layers_count.size()-1; i != 0;--i)
+			for (int i = layers_count.size()-2, j = layers_count.size() - 1; i != 0;--i,--j)
 			{
-				
-				matrix_of_gradients[i].map(matrix_of_layers[i+1], dFunc);
-				matrix_of_gradients[i].multiplyTwoMatrixWithOneOther(matrix_of_errors[i+1]);
-				matrix_of_gradients[i].multiplyWithSingleNumber(learningRate);
+				if (i == layers_count.size() - 2)
+				{
+					matrix_of_errors[i].subtract(*matrix_of_targets, matrix_of_layers[j]);
 
-				if (i < layers_count.size() - 1)
+					matrix_of_gradients[i].map(matrix_of_layers[j], dFunc);
+					matrix_of_gradients[i].multiplyTwoMatrixWithOneOther(matrix_of_errors[i]);
+					matrix_of_gradients[i].multiplyWithSingleNumber(learningRate);
+
+					matrix_of_bias[j].addTwoMatrix(matrix_of_gradients[i]);
 					matrix_of_layersForTranspose[i].transpose(matrix_of_layers[i]);
+					matrix_of_deltaWeights[i].multiplyTwoMatrix(matrix_of_gradients[i], *matrix_of_layersForTranspose);
+					matrix_of_weights[i].addTwoMatrix(matrix_of_deltaWeights[i]);
+					matrix_of_bias[i].addTwoMatrix(matrix_of_gradients[i]);
+				}
+				else {
+					matrix_of_bias[i].addTwoMatrix(matrix_of_gradients[i]);
 
-				matrix_of_deltaWeights[i].multiplyTwoMatrix(matrix_of_gradients[i], matrix_of_layersForTranspose);
-				matrix_of_weights[i].addTwoMatrix(matrix_of_deltaWeights[i]);
-				matrix_of_bias[i].addTwoMatrix(matrix_of_gradients[i]);
+					matrix_of_gradients[i].map(matrix_of_layers[i], dFunc);
+					matrix_of_gradients[i].multiplyTwoMatrixWithOneOther(matrix_of_errors[i]);
+					matrix_of_gradients[i].multiplyWithSingleNumber(learningRate);
 
+					matrix_of_layersForTranspose[i].transpose(matrix_of_layers[j]);
+					matrix_of_deltaWeights[i].multiplyTwoMatrix(matrix_of_gradients[i], *matrix_of_layersForTranspose);
+					matrix_of_weights[i].addTwoMatrix(matrix_of_deltaWeights[i]);
+					matrix_of_bias[i].addTwoMatrix(matrix_of_gradients[i]);
+					
+				}
 			}
 
 			delete[] matrix_of_errors;
@@ -175,14 +198,25 @@ namespace NNLib {
 
 		void setActivationFunction(ActivationFunction function, ActivationFunction dFunction)
 		{
-			if (function == ActivationFunctions<NNType>::sigmoidFunction && dFunction == ActivationFunctions<NNType>::dSigmoidFunction) {
-				func = ActivationFunctions<NNType>::sigmoidFunction;
-				dFunc = ActivationFunctions<NNType>::dSigmoidFunction;
+			/*
+			if (function == &ActivationFunctions<NNType>::sigmoidFunction && dFunction == &ActivationFunctions<NNType>::dSigmoidFunction) {
+				func = &ActivationFunctions<NNType>::sigmoidFunction;
+				dFunc = &ActivationFunctions<NNType>::dSigmoidFunction;
 			}
-			else if (function == ActivationFunctions<NNType>::hyperbolicTangens && dFunction == ActivationFunctions<NNType>::dHyperbolicTanhgens) {
-				func = ActivationFunctions<NNType>::hyperbolicTanhgens;
-				dFunc = ActivationFunctions<NNType>::dHyperbolicTanhgens;
+			else if (function == &ActivationFunctions<NNType>::hyperbolicTanhgens && dFunction == &ActivationFunctions<NNType>::dHyperbolicTanhgens) {
+				func = &ActivationFunctions<NNType>::hyperbolicTanhgens;
+				dFunc = &ActivationFunctions<NNType>::dHyperbolicTanhgens;
+			}*/
+
+			if (function == &sigmoidFunction && dFunction == &dSigmoidFunction) {
+				func = sigmoidFunction;
+				dFunc = dSigmoidFunction;
 			}
+			else if (function == &hyperbolicTanhgens && dFunction == &dHyperbolicTanhgens) {
+				func = hyperbolicTanhgens;
+				dFunc = dHyperbolicTanhgens;
+			}
+
 		}
 
 	};
