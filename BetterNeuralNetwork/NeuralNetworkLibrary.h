@@ -92,14 +92,11 @@ namespace NNLib {
 				matrix_of_weights = new mxLib::Matrix<NNType>[layers_count.size()-1];
 				matrix_of_layers = new mxLib::Matrix<NNType>[layers_count.size()];
 				matrix_of_bias = new mxLib::Matrix<NNType>[layers_count.size()-1];
-				for (int i = 0; i < layers_count.size(); ++i) {
+				for (int i = 0; i < layers_count.size()-1; ++i) {
 
-					if (i < layers_count.size() - 1) {
-						matrix_of_layers[i] = mxLib::Matrix<NNType>(layers_count[i + 1], layers_count[i]);
-						matrix_of_weights[i] = mxLib::Matrix<NNType>(layers_count[i + 1], layers_count[i]);
-						matrix_of_bias[i] = mxLib::Matrix<NNType>(layers_count[i + 1], layers_count[i]);
-
-					}
+					matrix_of_layers[i] = mxLib::Matrix<NNType>(layers_count[i + 1], layers_count[i]);
+					matrix_of_weights[i] = mxLib::Matrix<NNType>(layers_count[i + 1], layers_count[i]);
+					matrix_of_bias[i] = mxLib::Matrix<NNType>(layers_count[i + 1], layers_count[i]);
 
 				}
 				for (int i = 0; i < layers_count.size()-1; ++i) {
@@ -134,13 +131,11 @@ namespace NNLib {
 		std::vector<NNType> feedForward(std::vector<NNType> inputs)
 		{
 			matrix_of_inputs->fromArray(inputs, inputs.size());
-			for (int i = 0; i < layers_count.size(); ++i) {
+			for (int i = 0; i < layers_count.size()-1; ++i) {
 			
-				if (i < layers_count.size() - 1) {
-					matrix_of_layers[i].multiplyTwoMatrix(matrix_of_weights[i], *matrix_of_inputs);
-					matrix_of_layers[i].addTwoMatrix(matrix_of_bias[i]);
-					matrix_of_layers[i].map(func);
-				}
+				matrix_of_layers[i].multiplyTwoMatrix(matrix_of_weights[i], *matrix_of_inputs);
+				matrix_of_layers[i].addTwoMatrix(matrix_of_bias[i]);
+				matrix_of_layers[i].map(func);
 
 			}
 
